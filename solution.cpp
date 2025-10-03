@@ -18,12 +18,32 @@ int compute_score(const std::vector<std::vector<int>>& board);
 // TODO: Compress a row: remove zeros, pad with zeros at the end
 std::vector<int> compress_row(const std::vector<int>& row) {
     // TODO: Use copy_if to filter non-zero values, then pad with zeros
-    return row;
+
+    std::vector<int> compressed;
+    copy_if(row.begin(), row.end(), std::back_inserter(compressed), [](int v) {return v != 0;});
+
+    int len = compressed.size();
+    while(len != row.size()){
+      compressed.push_back(0);
+      len++;
+    }
+
+    return compressed;
 }
 
 // TODO: Merge a row (assumes already compressed)
 std::vector<int> merge_row(std::vector<int> row) {
     // TODO: Implement merging logic - combine adjacent equal tiles
+
+    int len = row.size();
+    for(int i = 0; i < len - 1; i++){
+        if(row[i] == row[i + 1]){
+            row[i] *= 2;
+            row[i + 1] = 0;
+            i++;
+        }
+    }
+    row = compress_row(row);
     return row;
 }
 
@@ -72,9 +92,20 @@ void read_board_csv(vector<vector<int>>& board) {
 
 void print_board(const vector<vector<int>>& board) {
     // TODO: Print the score using compute_score(board)
+    std::cout << "score: " << compute_score(board) << std::endl;
+
     // TODO: Print the board in a 4x4 format
     // TODO: Use dots (.) for empty cells (value 0)
     // TODO: Use tabs (\t) to separate values for alignment
+    for (auto &row : board){
+        for (auto val : row){
+            if (val == 0) cout << ".\t";
+            else cout << val << "\t";
+        }
+        cout << "\n";
+    }
+    cout << endl;
+    //write_board_csv(board, first);
 }
 
 void spawn_tile(std::vector<std::vector<int>>& board) {
@@ -100,6 +131,16 @@ bool move_left(std::vector<std::vector<int>>& board) {
     //   1. Compress the row (remove zeros)
     //   2. Merge adjacent equal tiles
     //   3. Check if the row changed
+
+    for(auto& row : board){
+        std::vector<int> new_row;
+        new_row = compress_row(row);
+        new_row = merge_row(new_row);
+        if(new_row != row){
+            row = new_row;
+            moved = true;
+        }
+    }
     return moved;
 }
 
@@ -107,6 +148,18 @@ bool move_left(std::vector<std::vector<int>>& board) {
 bool move_right(std::vector<std::vector<int>>& board) {
     bool moved = false;
     // TODO: Similar to move_left but with reversal
+
+    for(auto& row : board){
+        std::reverse(row.begin(), row.end());
+        std::vector<int> new_row;
+        new_row = compress_row(row);
+        new_row = merge_row(new_row);
+        if(new_row != row){
+            row = new_row;
+            moved = true;
+       }
+       std::reverse(row.begin(), row.end());
+    }
     return moved;
 }
 
@@ -114,6 +167,19 @@ bool move_right(std::vector<std::vector<int>>& board) {
 bool move_up(std::vector<std::vector<int>>& board) {
     bool moved = false;
     // TODO: Extract column, compress, merge, write back
+    for(int i = 0; i < 4; i++){
+        std::vector<int> col = {board[0][i], board[1][i], board[2][i], board[3][i]};
+        std::vector<int> new_col;
+        new_col = compress_row(col);
+        new_col = merge_row(new_col);
+            if(new_col != col){
+                moved = true;
+                for(int j = 0; j < 4; j++){
+                    board[j][i] = new_col[j];
+                }
+            }
+    }
+
     return moved;
 }
 
@@ -121,6 +187,20 @@ bool move_up(std::vector<std::vector<int>>& board) {
 bool move_down(std::vector<std::vector<int>>& board) {
     bool moved = false;
     // TODO: Similar to move_up but with reversal
+    for(int i = 0; i < 4; i++){
+        std::vector<int> col = {board[0][i], board[1][i], board[2][i], board[3][i]};
+        std::reverse(col.begin(), col.end());
+        std::vector<int> new_col;
+        new_col = compress_row(col);
+        new_col = merge_row(new_col);
+            if(new_col != col){
+                moved = true;
+                std::reverse(new_col.begin(), new_col.end());
+                for(int j = 0; j < 4; j++){
+                    board[j][i] = new_col[j];
+                }
+            }
+    }
     return moved;
 }
 
@@ -164,6 +244,13 @@ int main(){
             //   3. Call print_board(board) to show the restored board
             //   4. Call write_board_csv(board, false, "undo") to log the undo
             // Use 'continue' to skip the rest of the loop iteration
+
+            if(!history.empty()){
+                board = history.top();
+                print_board(board);
+                write_board_csv(board, false, "undo");
+                continue;
+            }
         }
 
         vector<vector<int>> prev = board;
@@ -176,7 +263,7 @@ int main(){
         if (moved) {
             // TODO: Push the previous board state to history stack
             // Use: history.push(prev)
-
+            history.push(prev);
             // Write board after merge but before spawn
             write_board_csv(board, false, "merge");
 

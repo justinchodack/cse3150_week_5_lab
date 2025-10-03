@@ -1,3 +1,6 @@
 game_output.csv
 game_input.csv
-
+.DS_Store
+solution
+__pycache__
+solution.DSYM
